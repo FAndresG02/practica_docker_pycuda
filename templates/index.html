@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Docker - Pycuda</title>
+  <link rel="stylesheet" href="../static/styles.css">
+</head>
+
+<body>
+  <div class="container-main">
+    <div class="box header">
+      <h3>Imagen a procesar</h3>
+
+      <div class="div-imagen">
+        <img id="uploadedImage" src="../static/imagen_test.jpg" alt="Imagen a procesar" class="image">
+      </div>
+
+      <label for="imagen" class="button">Seleccionar imagen</label>
+      <input type="file" id="imagen" name="imagen" accept="image/*" required>
+
+    </div>
+    
+    <div class="box sidebar">
+      <h3 style="margin-top: 0px;">Resultado</h3>
+
+      <div class="div-imagen-resultado">
+        <img id="imageResult" src="../static/imagen_test.jpg" alt="Imagen a procesar" class="image">
+      </div>
+
+      <div>
+        <p id="tiempo"><strong>Tiempo de procesamiento:</strong></p>
+        <p id="mascara"><strong>Máscara:</strong></p>
+        <p id="bloques"><strong>Bloques:</strong></p>
+        <p id="hilos"><strong>Hilos:</strong></p>
+      </div>
+    </div>
+    
+    <div class="box">
+      <h3>Selección del filtro</h3>
+
+      <form>
+        <select id="items" name="items">
+            <option value="filtroGaussiano">Gaussiano</option>
+            <option value="filtroMedia">Media</option>
+            <option value="filtroLog">LoG</option>
+        </select>
+      </form>
+    </div>
+
+    <div class="box">
+      <h3>Selección de la máscara</h3>
+      <input class="custom-input" type="number" id="inputMascara" value="3" min="3" step="2">
+    </div>
+    
+    <div id="procesarBtn" class="box button" style="border-radius: 20px;">
+      <h2>Procesar</h2>
+    </div>
+    
+
+  </div>
+  <script src="../static/script.js"></script>
+</body>
+</html>
+
+
