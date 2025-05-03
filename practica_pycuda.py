@@ -69,7 +69,7 @@ def procesar_imagen():
     if tipoFiltro == "filtroGaussiano":
         print("Filtro gaussiano")
 
-        #imagen_final, bloques, hilos, duration = filtro_gaussiano_cuda(mascara, imagenGrises)
+        imagen_final, bloques, hilos, duration = filtro_gaussiano(mascara, imagenGrises)
 
     if tipoFiltro == "filtroMedia":
         print("Filtro media")
@@ -90,27 +90,27 @@ def procesar_imagen():
         'tiempo': duration
     }), 200
 
-
-
-
-def filtro_gaussiano(mascara, imagenGrises):
-    print("Mascara: ", mascara)
-    print("Imagen: ", imagenGrises.shape) 
-
-
-
-
-def filtro_mediana(mascara, imagenGrises):
-    print("Mascara: ", mascara)
-    print("Imagen: ", imagenGrises.shape) 
-
-
-
-
 def filtro_log(mascara, imagenGrises):
 
     #Recuperamos los resultados del filtro log
     imagen_resultante, bloques, hilos, duration = filtro_log_cuda(mascara, imagenGrises)
+
+    # Convertimos la imagen resultante a un formato que pueda ser enviado al frontend
+    imagen_resultante = Image.fromarray(imagen_resultante)
+
+    img_io = io.BytesIO()
+    imagen_resultante.save(img_io, format='PNG')
+    img_io.seek(0)
+
+    # Codificamos la imagen en base64
+    img_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+
+    return img_base64, bloques, hilos, duration
+
+def filtro_gaussiano(mascara, imagenGrises):
+
+    #Recuperamos los resultados del filtro log
+    imagen_resultante, bloques, hilos, duration = filtro_gaussiano_cuda(mascara, imagenGrises)
 
     # Convertimos la imagen resultante a un formato que pueda ser enviado al frontend
     imagen_resultante = Image.fromarray(imagen_resultante)
