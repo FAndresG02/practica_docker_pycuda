@@ -9,7 +9,6 @@ def generate_gaussian_kernel(size, sigma):
     center = size // 2
     kernel = np.zeros((size, size), dtype=np.float32)
 
-    # Factor de normalización (1 / (2πσ²))
     normalization_factor = 1 / (2 * np.pi * sigma**2)
 
     total = 0.0
@@ -39,41 +38,48 @@ def filtro_gaussiano_cuda(mascara, image):
         kCenterX = mascara // 2
         kCenterY = mascara // 2
 
-        mod = SourceModule("""
-        __global__ void convolutionKernel(
-            const unsigned char* d_input,
-            unsigned char* d_output,
-            int width, int height,
-            const float* d_kernel,
-            int kWidth, int kHeight,
-            int kCenterX, int kCenterY) {
+        gauss_kernel_code = SourceModule("""
+        __global__ void filtroGaussianoCUDA(
+            const unsigned char* imgEntrada,
+            unsigned char* imgSalida,
+            int ancho, int alto,
+            const float* matrizKernel,
+            int tamKernelX, int tamKernelY,
+            int centroX, int centroY) {
 
-            int x = blockIdx.x * blockDim.x + threadIdx.x;
-            int y = blockIdx.y * blockDim.y + threadIdx.y;
+            int coordX = blockIdx.x * blockDim.x + threadIdx.x;
+            int coordY = blockIdx.y * blockDim.y + threadIdx.y;
 
-            if (x < width && y < height) {
-                float sum = 0.0f;
-                for (int ky = 0; ky < kHeight; ky++) {
-                    for (int kx = 0; kx < kWidth; kx++) {
-                        int posX = x + kx - kCenterX;
-                        int posY = y + ky - kCenterY;
+            if (coordX >= ancho || coordY >= alto) return;
 
-                        if (posX >= 0 && posX < width && posY >= 0 && posY < height) {
-                            float pixel = (float)(d_input[posY * width + posX]);
-                            float kval = d_kernel[ky * kWidth + kx];
-                            sum += pixel * kval;
-                        }
+            float acumulado = 0.0f;
+
+            for (int fila = 0; fila < tamKernelY; ++fila) {
+                for (int col = 0; col < tamKernelX; ++col) {
+                    int posX = coordX + col - centroX;
+                    int posY = coordY + fila - centroY;
+
+                    bool dentro = (posX >= 0 && posX < ancho && posY >= 0 && posY < alto);
+                    if (dentro) {
+                        int idxImagen = posY * ancho + posX;
+                        int idxKernel = fila * tamKernelX + col;
+
+                        float intensidad = static_cast<float>(imgEntrada[idxImagen]);
+                        float peso = matrizKernel[idxKernel];
+
+                        acumulado += intensidad * peso;
                     }
                 }
-
-                int valor = (int)(roundf(sum));
-                valor = min(max(valor, 0), 255);
-                d_output[y * width + x] = (unsigned char)(valor);
             }
+
+            int resultado = __float2int_rn(acumulado);
+            resultado = max(0, min(255, resultado));
+            imgSalida[coordY * ancho + coordX] = static_cast<unsigned char>(resultado);
         }
         """)
 
-        start = time()  # Medición de tiempo de inicio
+
+        start = time()  
 
         input_flat = image.astype(np.uint8).flatten()
         output_flat = np.empty_like(input_flat)
@@ -89,7 +95,7 @@ def filtro_gaussiano_cuda(mascara, image):
         block_size = (16, 16, 1)
         grid_size = ((width + 15) // 16, (height + 15) // 16)
 
-        kernel_func = mod.get_function("convolutionKernel")
+        kernel_func = gauss_kernel_code.get_function("filtroGaussianoCUDA")
         kernel_func(d_input, d_output,
                     np.int32(width), np.int32(height),
                     d_kernel,
@@ -100,11 +106,10 @@ def filtro_gaussiano_cuda(mascara, image):
         cuda.memcpy_dtoh(output_flat, d_output)
 
         end = time()  # Medición de tiempo de finalización
-        duration_ms = (end - start) * 1000  # Convertir a milisegundos
+        duration_ms = (end - start) * 1000  
 
         result_image = output_flat.reshape((height, width))
 
-        # Imprimir el tiempo de ejecución en milisegundos
         print(f"Tiempo de ejecución: {duration_ms:.2f} ms")
 
         return result_image, grid_size, block_size, duration_ms
